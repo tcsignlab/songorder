@@ -62,17 +62,32 @@
             .block::after { color: #333; }
         }
         .ghost { opacity: 0.4; }
+        .hero {
+            height: 300px;
+            background: url('https://via.placeholder.com/1920x300?text=Hero+Header') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: 3em;
+        }
     </style>
 </head>
 <body>
-    <h1>Song Builder</h1>
-    
+    <div class="hero">
+        <h1>Song Builder</h1>
+    </div>
+   
     <label>Working Song Title:</label>
     <input type="text" id="title" placeholder="Enter working title">
-    
+   
     <label>Notes:</label>
     <textarea id="notes" placeholder="Enter notes here..."></textarea>
-    
+   
     <div id="controls">
         <label for="loadFile">Load File: <input type="file" id="loadFile" accept=".json" style="display:inline; background: transparent; border: none; color: white;"></label>
         <button onclick="saveSong()">Save File</button>
@@ -80,13 +95,12 @@
         <button onclick="saveScreenshot()">Save Screenshot</button>
         <button onclick="newSong()">Clear</button>
     </div>
-    
+   
     <h1>Available Blocks</h1>
     <div id="palette"></div>
-    
+   
     <h1>DRAG BLOCKS HERE</h1><p><center>(Hold + Drag to Re-Order / Double Click to Adjust Multiplier 1x - 16x)</center></p>
     <div id="blocks"></div>
-
     <script>
         const colorMap = {
             'Intro': '#007bff',
@@ -99,17 +113,14 @@
             'Custom': '#ff0000'
         };
         const colors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#17a2b8', '#dc3545', '#fd7e14'];
-
         const paletteEl = document.getElementById('palette');
         const blocksEl = document.getElementById('blocks');
-
         new Sortable(paletteEl, {
             group: { name: 'song', pull: 'clone', put: false },
             sort: false,
             animation: 150,
             ghostClass: 'ghost'
         });
-
         new Sortable(blocksEl, {
             group: 'song',
             animation: 150,
@@ -127,7 +138,6 @@
                 if (nameSpan) nameSpan.contentEditable = 'true';
             }
         });
-
         function createBlock(name, mult, color, isPalette = false) {
             const block = document.createElement('div');
             block.className = 'block';
@@ -140,7 +150,6 @@
             `;
             return block;
         }
-
         function populatePalette() {
             paletteEl.innerHTML = '';
             paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro'], true));
@@ -152,15 +161,12 @@
             paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro'], true));
             paletteEl.appendChild(createBlock('Custom', 4, colorMap['Custom'], true));
         }
-
         populatePalette();
-
         document.addEventListener('click', e => {
             if (e.target.classList.contains('delete')) {
                 e.target.parentNode.remove();
             }
         });
-
         document.addEventListener('blur', e => {
             if (e.target.classList.contains('name')) {
                 let name = e.target.innerText.trim() || 'Section';
@@ -178,7 +184,6 @@
                 }
             }
         }, true);
-
         document.addEventListener('dblclick', e => {
             const block = e.target.closest('.block');
             if (block && block.parentNode.id === 'blocks') {
@@ -193,7 +198,6 @@
                 }
             }
         });
-
         function getSongData() {
             const blocks = [];
             document.querySelectorAll('#blocks .block').forEach(b => {
@@ -208,7 +212,6 @@
                 blocks
             };
         }
-
         function saveSong() {
             const song = getSongData();
             const title = song.title || 'song';
@@ -220,7 +223,6 @@
             a.click();
             URL.revokeObjectURL(url);
         }
-
         document.getElementById('loadFile').addEventListener('change', e => {
             const file = e.target.files[0];
             if (!file) return;
@@ -243,11 +245,9 @@
             };
             reader.readAsText(file);
         });
-
         function printSong() {
             window.print();
         }
-
         function saveScreenshot() {
             html2canvas(document.body).then(canvas => {
                 const a = document.createElement('a');
@@ -256,7 +256,6 @@
                 a.click();
             });
         }
-
         function newSong() {
             if (confirm('Clear everything?')) {
                 document.getElementById('title').value = '';
