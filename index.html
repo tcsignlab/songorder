@@ -44,7 +44,6 @@
             cursor: pointer;
         }
         .block .name, .block .mult { margin: 0 5px; }
-        .block .mult { cursor: pointer; }
         .block::after {
             content: '→';
             position: absolute;
@@ -116,7 +115,23 @@
         new Sortable(blocksEl, {
             group: 'song',
             animation: 150,
-            ghostClass: 'ghost'
+            ghostClass: 'ghost',
+            onAdd: function(evt) {
+                const item = evt.item;
+                // Add delete button
+                if (!item.querySelector('.delete')) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.innerText = 'X';
+                    item.insertBefore(deleteBtn, item.firstChild);
+                }
+                // Make name editable
+                const nameSpan = item.querySelector('.name');
+                if (nameSpan) {
+                    nameSpan.contentEditable = 'true';
+                }
+            }
         });
 
         function createBlock(name, mult, color, isPalette = false) {
@@ -127,7 +142,7 @@
             block.innerHTML = `
                 ${!isPalette ? '<button class="delete" title="Delete">X</button>' : ''}
                 <span class="name" ${!isPalette ? 'contenteditable="true"' : ''}>${name}</span>
-                <span class="mult" ${!isPalette ? 'title="Click to edit multiplier"' : ''}>${mult}x</span>
+                <span class="mult">${mult}x</span>
             `;
             return block;
         }
@@ -141,52 +156,47 @@
         paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude'], true));
         paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro'], true));
 
-        // Event listeners
+        // Delete on click
         document.addEventListener('click', e => {
-            if (e.target.classList.contains('delete') && e.target.closest('#blocks')) {
+            if (e.target.classList.contains('delete')) {
                 e.target.parentNode.remove();
-            }
-            if (e.target.classList.contains('mult') && e.target.closest('#blocks')) {
-                const currentMult = parseInt(e.target.innerText.replace('x', ''), 10);
-                const select = document.createElement('select');
-                for (let i = 1; i <= 16; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.text = i + 'x';
-                    if (i === currentMult) option.selected = true;
-                    select.appendChild(option);
-                }
-                select.style.width = '60px';
-                e.target.replaceWith(select);
-                select.focus();
-                const updateMult = () => {
-                    const mult = parseInt(select.value, 10);
-                    const span = document.createElement('span');
-                    span.className = 'mult';
-                    span.title = 'Click to edit multiplier';
-                    span.innerText = mult + 'x';
-                    select.replaceWith(span);
-                    const block = span.parentNode;
-                    block.style.width = (80 + mult * 30) + 'px';
-                };
-                select.addEventListener('change', updateMult);
-                select.addEventListener('blur', updateMult);
             }
         });
 
+        // Update name and color on blur
         document.addEventListener('blur', e => {
-            if (e.target.classList.contains('name') && e.target.closest('#blocks')) {
+            if (e.target.classList.contains('name')) {
                 let name = e.target.innerText.trim() || 'Section';
                 e.target.innerText = name;
                 const nameLower = name.toLowerCase();
-                let newColor = colorMap[key] for (let key in colorMap) if (key.toLowerCase() === nameLower);
+                let newColor;
+                for (let key in colorMap) {
+                    if (key.toLowerCase() === nameLower) {
+                        newColor = colorMap[key];
+                        break;
+                    }
+                }
                 if (newColor) {
                     e.target.parentNode.style.backgroundColor = newColor;
-                } else if (!colorMap[name]) {
-                    // If custom, keep current or assign random if new
                 }
             }
         }, true);
+
+        // Double-click on block to change width
+        document.addEventListener('dblclick', e => {
+            const block = e.target.closest('.block');
+            if (block && block.parentNode.id === 'blocks') {
+                const multSpan = block.querySelector('.mult');
+                const currentMult = parseInt(multSpan.innerText.replace('x', ''), 10);
+                const newMultStr = prompt('Enter new multiplier (1-16):', currentMult);
+                if (newMultStr !== null) {
+                    let newMult = parseInt(newMultStr, 10);
+                    newMult = Math.max(1, Math.min(16, isNaN(newMult) ? currentMult : newMult));
+                    multSpan.innerText = newMult + 'x';
+                    block.style.width = (80 + newMult * 30) + 'px';
+                }
+            }
+        });
 
         function addBlock() {
             const name = prompt('Block name:', 'Custom') || 'Section';
