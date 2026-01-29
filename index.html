@@ -43,7 +43,8 @@
             font-size: 14px;
             cursor: pointer;
         }
-        .block span { pointer-events: none; } /* prevent drag interference */
+        .block .name, .block .mult { margin: 0 5px; }
+        .block .mult { cursor: pointer; }
         .block::after {
             content: '→';
             position: absolute;
@@ -118,64 +119,78 @@
             ghostClass: 'ghost'
         });
 
-        function createBlock(name, mult, color) {
+        function createBlock(name, mult, color, isPalette = false) {
             const block = document.createElement('div');
             block.className = 'block';
             block.style.backgroundColor = color;
             block.style.width = (80 + mult * 30) + 'px';
             block.innerHTML = `
-                <button class="delete" title="Delete">X</button>
-                <span contenteditable="true">${name} ${mult}x</span>
+                ${!isPalette ? '<button class="delete" title="Delete">X</button>' : ''}
+                <span class="name" ${!isPalette ? 'contenteditable="true"' : ''}>${name}</span>
+                <span class="mult" ${!isPalette ? 'title="Click to edit multiplier"' : ''}>${mult}x</span>
             `;
             return block;
         }
 
         // Populate palette with blocks
-        paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro']));
-        paletteEl.appendChild(createBlock('Verse', 8, colorMap['Verse']));
-        paletteEl.appendChild(createBlock('Pre-Chorus', 4, colorMap['Pre-Chorus']));
-        paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus']));
-        paletteEl.appendChild(createBlock('Bridge', 4, colorMap['Bridge']));
-        paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude']));
-        paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro']));
+        paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro'], true));
+        paletteEl.appendChild(createBlock('Verse', 8, colorMap['Verse'], true));
+        paletteEl.appendChild(createBlock('Pre-Chorus', 4, colorMap['Pre-Chorus'], true));
+        paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus'], true));
+        paletteEl.appendChild(createBlock('Bridge', 4, colorMap['Bridge'], true));
+        paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude'], true));
+        paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro'], true));
 
-        // Delete on click
+        // Event listeners
         document.addEventListener('click', e => {
-            if (e.target.classList.contains('delete')) {
+            if (e.target.classList.contains('delete') && e.target.closest('#blocks')) {
                 e.target.parentNode.remove();
+            }
+            if (e.target.classList.contains('mult') && e.target.closest('#blocks')) {
+                const currentMult = parseInt(e.target.innerText.replace('x', ''), 10);
+                const select = document.createElement('select');
+                for (let i = 1; i <= 16; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.text = i + 'x';
+                    if (i === currentMult) option.selected = true;
+                    select.appendChild(option);
+                }
+                select.style.width = '60px';
+                e.target.replaceWith(select);
+                select.focus();
+                const updateMult = () => {
+                    const mult = parseInt(select.value, 10);
+                    const span = document.createElement('span');
+                    span.className = 'mult';
+                    span.title = 'Click to edit multiplier';
+                    span.innerText = mult + 'x';
+                    select.replaceWith(span);
+                    const block = span.parentNode;
+                    block.style.width = (80 + mult * 30) + 'px';
+                };
+                select.addEventListener('change', updateMult);
+                select.addEventListener('blur', updateMult);
             }
         });
 
-        // Update width and color on edit
         document.addEventListener('blur', e => {
-            if (e.target.tagName === 'SPAN' && e.target.contentEditable) {
-                let text = e.target.innerText.trim();
-                let name = text;
-                let mult = 1;
-                const match = text.match(/^(.*?)(\d+)x$/i);
-                if (match) {
-                    name = match[1].trim() || 'Section';
-                    mult = parseInt(match[2], 10) || 1;
-                }
-                mult = Math.max(1, Math.min(16, mult));
-                e.target.innerText = `${name} ${mult}x`; // normalize text
-                e.target.parentNode.style.width = (80 + mult * 30) + 'px';
-
+            if (e.target.classList.contains('name') && e.target.closest('#blocks')) {
+                let name = e.target.innerText.trim() || 'Section';
+                e.target.innerText = name;
                 const nameLower = name.toLowerCase();
-                let newColor = e.target.parentNode.style.backgroundColor;
-                for (let key in colorMap) {
-                    if (key.toLowerCase() === nameLower) {
-                        newColor = colorMap[key];
-                        break;
-                    }
+                let newColor = colorMap[key] for (let key in colorMap) if (key.toLowerCase() === nameLower);
+                if (newColor) {
+                    e.target.parentNode.style.backgroundColor = newColor;
+                } else if (!colorMap[name]) {
+                    // If custom, keep current or assign random if new
                 }
-                e.target.parentNode.style.backgroundColor = newColor;
             }
         }, true);
 
         function addBlock() {
             const name = prompt('Block name:', 'Custom') || 'Section';
-            let mult = parseInt(prompt('Block width (1x to 16x):', '4'), 10) || 4;
+            let mult = parseInt(prompt('Block width (1 to 16):', '4'), 10) || 4;
             mult = Math.max(1, Math.min(16, mult));
             const nameLower = name.toLowerCase();
             let color = colors[Math.floor(Math.random() * colors.length)];
@@ -192,14 +207,9 @@
         function getSongData() {
             const blocks = [];
             document.querySelectorAll('#blocks .block').forEach(b => {
-                const text = b.querySelector('span').innerText.trim();
-                let name = text;
-                let mult = 1;
-                const match = text.match(/^(.*?)(\d+)x$/i);
-                if (match) {
-                    name = match[1].trim() || 'Section';
-                    mult = parseInt(match[2], 10) || 1;
-                }
+                const name = b.querySelector('.name').innerText.trim();
+                const multText = b.querySelector('.mult').innerText.trim();
+                const mult = parseInt(multText.replace('x', ''), 10) || 1;
                 blocks.push({
                     name,
                     mult,
