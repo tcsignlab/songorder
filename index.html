@@ -74,7 +74,6 @@
     <textarea id="notes" placeholder="Enter notes here..."></textarea>
     
     <div id="controls">
-        <button onclick="addBlock()">Add Custom Block</button>
         <button onclick="saveSong()">Save File</button>
         <label for="loadFile">Load File: <input type="file" id="loadFile" accept=".json" style="display:inline; background: transparent; border: none; color: white;"></label>
         <button onclick="printSong()">Print</button>
@@ -96,7 +95,8 @@
             'Pre-Chorus': '#6f42c1',
             'Bridge': '#fd7e14',
             'Interlude': '#17a2b8',
-            'Outro': '#dc3545'
+            'Outro': '#dc3545',
+            'Custom': '#ff0000'
         };
         const colors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#17a2b8', '#dc3545', '#fd7e14'];
 
@@ -150,6 +150,7 @@
             paletteEl.appendChild(createBlock('Bridge', 4, colorMap['Bridge'], true));
             paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude'], true));
             paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro'], true));
+            paletteEl.appendChild(createBlock('Custom', 4, colorMap['Custom'], true));
         }
 
         populatePalette();
@@ -192,22 +193,6 @@
                 }
             }
         });
-
-        function addBlock() {
-            const name = prompt('Block name:', 'Custom') || 'Section';
-            let mult = parseInt(prompt('Block width (1-16):', '4'), 10) || 4;
-            mult = Math.max(1, Math.min(16, mult));
-            const nameLower = name.toLowerCase();
-            let color = colors[Math.floor(Math.random() * colors.length)];
-            for (let key in colorMap) {
-                if (key.toLowerCase() === nameLower) {
-                    color = colorMap[key];
-                    break;
-                }
-            }
-            const block = createBlock(name, mult, color);
-            blocksEl.appendChild(block);
-        }
 
         function getSongData() {
             const blocks = [];
