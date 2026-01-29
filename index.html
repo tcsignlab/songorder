@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Song Structure Builder</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: black; color: white; }
         h1, h2 { text-align: center; color: white; }
@@ -77,6 +78,7 @@
         <button onclick="saveSong()">Save (Download JSON)</button>
         <label for="loadFile">Load JSON: <input type="file" id="loadFile" accept=".json" style="display:inline; background: transparent; border: none; color: white;"></label>
         <button onclick="printSong()">Print</button>
+        <button onclick="saveScreenshot()">Save Screenshot</button>
         <button onclick="newSong()">New / Clear</button>
     </div>
     
@@ -94,6 +96,8 @@
             'Verse 1': '#ffc107',
             'Verse 2': '#ffc107',
             'Pre-Chorus': '#6f42c1',
+            'Bridge': '#fd7e14',
+            'Interlude': '#17a2b8',
             'Outro': '#dc3545'
         };
         const colors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#17a2b8', '#dc3545', '#fd7e14']; // fallback cycle
@@ -126,11 +130,13 @@
             return block;
         }
 
-        // Populate palette with blocks from image
+        // Populate palette with blocks
         paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro']));
-        paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus']));
         paletteEl.appendChild(createBlock('Verse', 8, colorMap['Verse']));
         paletteEl.appendChild(createBlock('Pre-Chorus', 4, colorMap['Pre-Chorus']));
+        paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus']));
+        paletteEl.appendChild(createBlock('Bridge', 4, colorMap['Bridge']));
+        paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude']));
         paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro']));
 
         // Delete on click
@@ -151,6 +157,7 @@
                     name = match[1].trim() || 'Section';
                     mult = parseInt(match[2], 10) || 1;
                 }
+                mult = Math.max(1, Math.min(16, mult));
                 e.target.innerText = `${name} ${mult}x`; // normalize text
                 e.target.parentNode.style.width = (80 + mult * 30) + 'px';
 
@@ -167,8 +174,9 @@
         }, true);
 
         function addBlock() {
-            const name = prompt('Block name:', 'Bridge') || 'Section';
-            const mult = parseInt(prompt('Multiplier:', '4'), 10) || 4;
+            const name = prompt('Block name:', 'Custom') || 'Section';
+            let mult = parseInt(prompt('Block width (1x to 16x):', '4'), 10) || 4;
+            mult = Math.max(1, Math.min(16, mult));
             const nameLower = name.toLowerCase();
             let color = colors[Math.floor(Math.random() * colors.length)];
             for (let key in colorMap) {
@@ -242,6 +250,15 @@
 
         function printSong() {
             window.print();
+        }
+
+        function saveScreenshot() {
+            html2canvas(document.body).then(canvas => {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = 'song_structure.png';
+                a.click();
+            });
         }
 
         function newSong() {
