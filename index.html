@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Structure Builder</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: black; color: white; }
+        h1, h2 { text-align: center; color: white; }
+        label { font-weight: bold; color: white; }
+        input, textarea { width: 100%; margin: 10px 0; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; }
+        textarea { height: 100px; }
+        #controls { margin: 15px 0; display: flex; flex-wrap: wrap; gap: 10px; }
+        button { padding: 8px 12px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 4px; }
+        button:hover { background: #555; }
+        #palette, #blocks { display: flex; overflow-x: auto; padding: 10px 0; gap: 10px; align-items: center; }
+        .block {
+            position: relative;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 4px;
+            cursor: move;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .block .delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .block span { pointer-events: none; } /* prevent drag interference */
+        .block::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            color: #ccc;
+        }
+        .block:last-child::after { content: ''; }
+        @media print {
+            body { margin: 0; background: white; color: black; }
+            #controls, #palette, .delete, h2:first-of-type { display: none !important; }
+            #blocks { gap: 0; }
+            .block { page-break-inside: avoid; margin: 5px; color: black !important; }
+            .block::after { color: #333; }
+        }
+        .ghost { opacity: 0.4; }
+    </style>
+</head>
+<body>
+    <h1>Song Structure Layout</h1>
+    
+    <label>Working Title:</label>
+    <input type="text" id="title" placeholder="Enter working title">
+    
+    <label>Notes:</label>
+    <textarea id="notes" placeholder="Enter notes here..."></textarea>
+    
+    <div id="controls">
+        <button onclick="addBlock()">Add Custom Block</button>
+        <button onclick="saveSong()">Save (Download JSON)</button>
+        <label for="loadFile">Load JSON: <input type="file" id="loadFile" accept=".json" style="display:inline; background: transparent; border: none; color: white;"></label>
+        <button onclick="printSong()">Print</button>
+        <button onclick="newSong()">New / Clear</button>
+    </div>
+    
+    <h2>Available Blocks (Drag to Structure)</h2>
+    <div id="palette"></div>
+    
+    <h2>Your Song Structure</h2>
+    <div id="blocks"></div>
+
+    <script>
+        const colorMap = {
+            'Intro': '#007bff',
+            'Chorus': '#28a745',
+            'Verse': '#ffc107',
+            'Verse 1': '#ffc107',
+            'Verse 2': '#ffc107',
+            'Pre-Chorus': '#6f42c1',
+            'Outro': '#dc3545'
+        };
+        const colors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#17a2b8', '#dc3545', '#fd7e14']; // fallback cycle
+
+        const paletteEl = document.getElementById('palette');
+        const blocksEl = document.getElementById('blocks');
+
+        new Sortable(paletteEl, {
+            group: { name: 'song', pull: 'clone', put: false },
+            sort: false,
+            animation: 150,
+            ghostClass: 'ghost'
+        });
+
+        new Sortable(blocksEl, {
+            group: 'song',
+            animation: 150,
+            ghostClass: 'ghost'
+        });
+
+        function createBlock(name, mult, color) {
+            const block = document.createElement('div');
+            block.className = 'block';
+            block.style.backgroundColor = color;
+            block.style.width = (80 + mult * 30) + 'px';
+            block.innerHTML = `
+                <button class="delete" title="Delete">X</button>
+                <span contenteditable="true">${name} ${mult}x</span>
+            `;
+            return block;
+        }
+
+        // Populate palette with blocks from image
+        paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro']));
+        paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus']));
+        paletteEl.appendChild(createBlock('Verse', 8, colorMap['Verse']));
+        paletteEl.appendChild(createBlock('Pre-Chorus', 4, colorMap['Pre-Chorus']));
+        paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro']));
+
+        // Delete on click
+        document.addEventListener('click', e => {
+            if (e.target.classList.contains('delete')) {
+                e.target.parentNode.remove();
+            }
+        });
+
+        // Update width and color on edit
+        document.addEventListener('blur', e => {
+            if (e.target.tagName === 'SPAN' && e.target.contentEditable) {
+                let text = e.target.innerText.trim();
+                let name = text;
+                let mult = 1;
+                const match = text.match(/^(.*?)(\d+)x$/i);
+                if (match) {
+                    name = match[1].trim() || 'Section';
+                    mult = parseInt(match[2], 10) || 1;
+                }
+                e.target.innerText = `${name} ${mult}x`; // normalize text
+                e.target.parentNode.style.width = (80 + mult * 30) + 'px';
+
+                const nameLower = name.toLowerCase();
+                let newColor = e.target.parentNode.style.backgroundColor;
+                for (let key in colorMap) {
+                    if (key.toLowerCase() === nameLower) {
+                        newColor = colorMap[key];
+                        break;
+                    }
+                }
+                e.target.parentNode.style.backgroundColor = newColor;
+            }
+        }, true);
+
+        function addBlock() {
+            const name = prompt('Block name:', 'Bridge') || 'Section';
+            const mult = parseInt(prompt('Multiplier:', '4'), 10) || 4;
+            const nameLower = name.toLowerCase();
+            let color = colors[Math.floor(Math.random() * colors.length)];
+            for (let key in colorMap) {
+                if (key.toLowerCase() === nameLower) {
+                    color = colorMap[key];
+                    break;
+                }
+            }
+            const block = createBlock(name, mult, color);
+            blocksEl.appendChild(block);
+        }
+
+        function getSongData() {
+            const blocks = [];
+            document.querySelectorAll('#blocks .block').forEach(b => {
+                const text = b.querySelector('span').innerText.trim();
+                let name = text;
+                let mult = 1;
+                const match = text.match(/^(.*?)(\d+)x$/i);
+                if (match) {
+                    name = match[1].trim() || 'Section';
+                    mult = parseInt(match[2], 10) || 1;
+                }
+                blocks.push({
+                    name,
+                    mult,
+                    color: b.style.backgroundColor
+                });
+            });
+            return {
+                title: document.getElementById('title').value.trim(),
+                notes: document.getElementById('notes').value.trim(),
+                blocks
+            };
+        }
+
+        function saveSong() {
+            const song = getSongData();
+            const title = song.title || 'song';
+            const blob = new Blob([JSON.stringify(song, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = title.replace(/[^a-z0-9]/gi, '_') + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('loadFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const song = JSON.parse(ev.target.result);
+                    document.getElementById('title').value = song.title || '';
+                    document.getElementById('notes').value = song.notes || '';
+                    blocksEl.innerHTML = '';
+                    if (song.blocks && Array.isArray(song.blocks)) {
+                        song.blocks.forEach(b => {
+                            const block = createBlock(b.name || 'Section', b.mult || 4, b.color);
+                            blocksEl.appendChild(block);
+                        });
+                    }
+                } catch (err) {
+                    alert('Invalid JSON file');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function printSong() {
+            window.print();
+        }
+
+        function newSong() {
+            if (confirm('Clear everything?')) {
+                document.getElementById('title').value = '';
+                document.getElementById('notes').value = '';
+                blocksEl.innerHTML = '';
+            }
+        }
+    </script>
+</body>
+</html>
