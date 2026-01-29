@@ -75,17 +75,17 @@
     
     <div id="controls">
         <button onclick="addBlock()">Add Custom Block</button>
-        <button onclick="saveSong()">Save (Download JSON)</button>
+        <button onclick="saveSong()">Save JSON</button>
         <label for="loadFile">Load JSON: <input type="file" id="loadFile" accept=".json" style="display:inline; background: transparent; border: none; color: white;"></label>
         <button onclick="printSong()">Print</button>
         <button onclick="saveScreenshot()">Save Screenshot</button>
-        <button onclick="newSong()">New / Clear</button>
+        <button onclick="newSong()">Clear</button>
     </div>
     
-    <h2>Available Blocks (Drag to Structure)</h2>
+    <h2>Available Blocks</h2>
     <div id="palette"></div>
     
-    <h2>Your Song Structure</h2>
+    <h2>Song Structure</h2>
     <div id="blocks"></div>
 
     <script>
@@ -93,14 +93,12 @@
             'Intro': '#007bff',
             'Chorus': '#28a745',
             'Verse': '#ffc107',
-            'Verse 1': '#ffc107',
-            'Verse 2': '#ffc107',
             'Pre-Chorus': '#6f42c1',
             'Bridge': '#fd7e14',
             'Interlude': '#17a2b8',
             'Outro': '#dc3545'
         };
-        const colors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#17a2b8', '#dc3545', '#fd7e14']; // fallback cycle
+        const colors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#17a2b8', '#dc3545', '#fd7e14'];
 
         const paletteEl = document.getElementById('palette');
         const blocksEl = document.getElementById('blocks');
@@ -118,7 +116,6 @@
             ghostClass: 'ghost',
             onAdd: function(evt) {
                 const item = evt.item;
-                // Add delete button
                 if (!item.querySelector('.delete')) {
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete';
@@ -126,11 +123,8 @@
                     deleteBtn.innerText = 'X';
                     item.insertBefore(deleteBtn, item.firstChild);
                 }
-                // Make name editable
                 const nameSpan = item.querySelector('.name');
-                if (nameSpan) {
-                    nameSpan.contentEditable = 'true';
-                }
+                if (nameSpan) nameSpan.contentEditable = 'true';
             }
         });
 
@@ -147,23 +141,25 @@
             return block;
         }
 
-        // Populate palette with blocks
-        paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro'], true));
-        paletteEl.appendChild(createBlock('Verse', 8, colorMap['Verse'], true));
-        paletteEl.appendChild(createBlock('Pre-Chorus', 4, colorMap['Pre-Chorus'], true));
-        paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus'], true));
-        paletteEl.appendChild(createBlock('Bridge', 4, colorMap['Bridge'], true));
-        paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude'], true));
-        paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro'], true));
+        function populatePalette() {
+            paletteEl.innerHTML = '';
+            paletteEl.appendChild(createBlock('Intro', 8, colorMap['Intro'], true));
+            paletteEl.appendChild(createBlock('Verse', 8, colorMap['Verse'], true));
+            paletteEl.appendChild(createBlock('Pre-Chorus', 4, colorMap['Pre-Chorus'], true));
+            paletteEl.appendChild(createBlock('Chorus', 4, colorMap['Chorus'], true));
+            paletteEl.appendChild(createBlock('Bridge', 4, colorMap['Bridge'], true));
+            paletteEl.appendChild(createBlock('Interlude', 4, colorMap['Interlude'], true));
+            paletteEl.appendChild(createBlock('Outro', 8, colorMap['Outro'], true));
+        }
 
-        // Delete on click
+        populatePalette();
+
         document.addEventListener('click', e => {
             if (e.target.classList.contains('delete')) {
                 e.target.parentNode.remove();
             }
         });
 
-        // Update name and color on blur
         document.addEventListener('blur', e => {
             if (e.target.classList.contains('name')) {
                 let name = e.target.innerText.trim() || 'Section';
@@ -182,7 +178,6 @@
             }
         }, true);
 
-        // Double-click on block to change width
         document.addEventListener('dblclick', e => {
             const block = e.target.closest('.block');
             if (block && block.parentNode.id === 'blocks') {
@@ -200,7 +195,7 @@
 
         function addBlock() {
             const name = prompt('Block name:', 'Custom') || 'Section';
-            let mult = parseInt(prompt('Block width (1 to 16):', '4'), 10) || 4;
+            let mult = parseInt(prompt('Block width (1-16):', '4'), 10) || 4;
             mult = Math.max(1, Math.min(16, mult));
             const nameLower = name.toLowerCase();
             let color = colors[Math.floor(Math.random() * colors.length)];
@@ -220,11 +215,7 @@
                 const name = b.querySelector('.name').innerText.trim();
                 const multText = b.querySelector('.mult').innerText.trim();
                 const mult = parseInt(multText.replace('x', ''), 10) || 1;
-                blocks.push({
-                    name,
-                    mult,
-                    color: b.style.backgroundColor
-                });
+                blocks.push({ name, mult, color: b.style.backgroundColor });
             });
             return {
                 title: document.getElementById('title').value.trim(),
@@ -286,6 +277,7 @@
                 document.getElementById('title').value = '';
                 document.getElementById('notes').value = '';
                 blocksEl.innerHTML = '';
+                populatePalette(); // Reset palette if needed, but since clone, not necessary
             }
         }
     </script>
